@@ -4,21 +4,7 @@ OUTPUT_DIR ?= Release
 BUILD ?= MPI
 #set BUILD to MPI to force MPI, should be set in ../Makefile
 
-ifneq "$(wildcard ../camb/forutils)" ""
-FORUTILSPATH ?= $(shell pwd)/../camb/forutils
-else 
-ifneq "$(wildcard ./forutils)" ""
-FORUTILSPATH ?= $(shell pwd)/forutils
-else 
-ifneq "$(wildcard ../forutils)" ""
-FORUTILSPATH ?= $(shell pwd)/../forutils
-endif
-endif
-endif
-
-ifeq ($(FORUTILSPATH),)
-$(error Use  git clone --recurse-submodules, install forutils from https://github.com/cmbant/forutils, or set FORUTILSPATH variable)
-endif
+MPIF90C ?= mpif90
 
 ifortErr = $(shell which ifort >/dev/null; echo $$?)
 
@@ -27,49 +13,31 @@ ifeq "$(ifortErr)" "0"
 #ifort; Can remove -xHost if your cluster is not uniform, or specify specific processor optimizations -x...
 
 F90C     = ifort
+#use this if mpif90 is trying to use gfortran: MPIF90C = mpif90 -f90=ifort
 
-mpierr= $(shell which mpiifort >/dev/null 2>&1; echo $$?)
-ifeq "$(mpierr)" "0"
-MPIF90C  ?= mpiifort -fc=ifort
-endif
-
-FFLAGS = -mkl -O3 -no-prec-div -fpp
-DEBUGFLAGS = -mkl -g -check all -check noarg_temp_created -traceback -fpp -fpe0
+FFLAGS = -mkl -openmp -O3 -no-prec-div -fpp 
+DEBUGFLAGS = -mkl -openmp -g -check all -check noarg_temp_created -traceback -fpp -fpe0
 #add -fpe0 to check for floating point errors (think lowLike also throws these harmlessly)
 MODOUT = -module $(OUTPUT_DIR)
 LAPACKL =
 
-ifortVer_major = $(shell ifort -v 2>&1 | cut -d " " -f 3 | cut -d. -f 1)
-ifeq ($(shell test $(ifortVer_major) -gt 15; echo $$?),0)
-FFLAGS+= -qopenmp
-DEBUGFLAGS+= -qopenmp
-else
-FFLAGS+= -openmp
-DEBUGFLAGS+= -openmp
-endif
-
-ifneq ($(NERSC_HOST),)
-#setting for Edison/Cori on NERSC
-MPIF90C = ftn
-FFLAGS = -fpp -qopenmp -dynamic -axMIC-AVX512,CORE-AVX2  
-else
 ifeq ($(STATIC),YES)
 #so you can re-distribute the binary to another machine
 #static link details from https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor
 LAPACKL =  -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_intel_thread.a -Wl,--end-group -lpthread -lm
 FFLAGS+=  -axAVX,SEE4.2 -static-intel
 else
-ifneq ($(HOSTNAME),apollo-login)
-#Remove this if your cluster is not uniform (different CPUs)
 FFLAGS += -xHost
 endif
-endif
+
+ifneq ($(NERSC_HOST),)
+#setting for Edison/Hopper on NERSC
+MPIF90C = ftn
 endif
 
 else
-#gfortran 5.x and earlier will not work (many F2003 bugs)
-#gfortran 6 should work
-#see CosmoBox virtual machines for stable environments
+#gfortran 5.0 and earlier will not work (many F2003 bugs)
+#gfortran 6 trunk should work, and perhaps GCC 5.2 when available; see virtual machines for up-to-date environments
 F90C = gfortran
 FFLAGS = -cpp -O3 -ffast-math -ffree-line-length-none -fopenmp -fmax-errors=4
 DEBUGFLAGS = -cpp -g -fbounds-check -fbacktrace -ffree-line-length-none -fopenmp -fmax-errors=4 -ffpe-trap=invalid,overflow,zero
@@ -86,11 +54,12 @@ endif
 
 endif
 
-MPIF90C ?= mpif90
-
-
 #use "make RECOMBINATION=cosmorec" to build with CosmoRec rather than RECFAST default
 RECOMBINATION ?=recfast
+
+#KDE reionization model, different from camb and user-specified
+#use tanh_highz two-parameter reionization model.
+KDE_REION_MODEL ?= tanh
 
 EXTDATA=
 
@@ -138,16 +107,23 @@ CALCFILES = $(OUTPUT_DIR)/Calculator_CAMB.o
 #Can use params_H if you prefer more generic parameters
 PARAMETERIZATION = $(OUTPUT_DIR)/CosmologyParameterizations.o
 
-F90FLAGS = $(FFLAGS) $(IFLAG)../camb/fortran/$(OUTPUT_DIR) $(IFLAG)$(FORUTILSPATH)/$(OUTPUT_DIR)/ $(INCLUDE)
-LINKFLAGS = -L../camb/fortran/$(OUTPUT_DIR) -lcamb -L$(FORUTILSPATH)/$(OUTPUT_DIR) -lforutils $(LAPACKL) $(F90CRLINK) $(CLIKL)
+GETDISTFLAGS = $(FFLAGS)
+F90FLAGS = $(FFLAGS) $(IFLAG)../camb/$(OUTPUT_DIR) $(INCLUDE)
+LINKFLAGS = -L../camb/$(OUTPUT_DIR) -lcamb_$(RECOMBINATION) $(LAPACKL) $(F90CRLINK) $(CLIKL)
 
 ifneq ($(PICO),)
-ifneq ($(PICO),NO)
 CALCFILES += $(OUTPUT_DIR)/fpico_interface.o $(OUTPUT_DIR)/Calculator_PICO.o
 LINKFLAGS +=  $(shell python -c "import pypico; print pypico.get_link()")
 F90FLAGS += -DPICO $(shell python -c "import pypico; print pypico.get_include()")
 endif
-endif
+
+
+UTILS = $(OUTPUT_DIR)/MiscUtils.o $(OUTPUT_DIR)/ArrayUtils.o $(OUTPUT_DIR)/StringUtils.o $(OUTPUT_DIR)/MpiUtils.o $(OUTPUT_DIR)/FileUtils.o \
+    $(OUTPUT_DIR)/RandUtils.o $(OUTPUT_DIR)/ObjectLists.o $(OUTPUT_DIR)/Interpolation.o
+
+DISTFILES = $(UTILS) $(OUTPUT_DIR)/IniObjects.o \
+    $(OUTPUT_DIR)/ObjectParamNames.o $(OUTPUT_DIR)/Matrix_utils_new.o \
+    $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/samples.o $(OUTPUT_DIR)/IO.o $(OUTPUT_DIR)/GetDist.o
 
 
 ifneq ($(PRECISION),)
@@ -167,9 +143,24 @@ PLANCKLIKEFILES +=  $(OUTPUT_DIR)/temp_like.o
 PLANCKLIKEFILES += $(OUTPUT_DIR)/cliklike_CamSpec.o
 endif
 
+KDEFILES = $(OUTPUT_DIR)/KernelDensityEstimate.o 
+
+ifeq ($(KDE_REION_MODEL), tanh) 
+#FFLAGS += -DTANH
+REIFILES = $(OUTPUT_DIR)/custom_xe_tanh.o $(OUTPUT_DIR)/kde_reionization_tanh.o
+KDEFILES += $(REIFILES)
+endif
+
+ifeq ($(KDE_REION_MODEL), tanh_highz) 
+#FFLAGS += -DTANHHIGHZ
+REIFILES = $(OUTPUT_DIR)/custom_xe_tanh_highz.o $(OUTPUT_DIR)/kde_reionization_tanh_highz.o
+KDEFILES += $(REIFILES)
+endif
+
 LIKEFILES =  $(OUTPUT_DIR)/DataLikelihoods.o $(OUTPUT_DIR)/calclike.o
 
-OBJFILES = $(OUTPUT_DIR)/ObjectParamNames.o $(OUTPUT_DIR)/settings.o \
+OBJFILES = $(UTILS) $(OUTPUT_DIR)/IniObjects.o $(OUTPUT_DIR)/ObjectParamNames.o \
+	$(OUTPUT_DIR)/Matrix_utils_new.o  $(OUTPUT_DIR)/settings.o \
 	$(OUTPUT_DIR)/samples.o $(OUTPUT_DIR)/IO.o $(OUTPUT_DIR)/likelihood.o $(OUTPUT_DIR)/GeneralTypes.o $(OUTPUT_DIR)/BaseParameters.o \
 	$(OUTPUT_DIR)/propose.o $(OUTPUT_DIR)/ParamSet.o $(OUTPUT_DIR)/PowellConstrainedMinimize.o $(OUTPUT_DIR)/ImportanceSampling.o \
 	$(OUTPUT_DIR)/MCMC.o $(OUTPUT_DIR)/minimize.o $(OUTPUT_DIR)/SampleCollector.o $(OUTPUT_DIR)/GeneralSetup.o
@@ -184,7 +175,7 @@ DATAMODULES = $(PLANCKLIKEFILES) $(OUTPUT_DIR)/mpk.o $(OUTPUT_DIR)/wigglez.o \
 DATAMODULES += $(OUTPUT_DIR)/wl.o
 
 COSMOFILES = $(OUTPUT_DIR)/CosmologyTypes.o $(OUTPUT_DIR)/CosmoTheory.o $(OUTPUT_DIR)/bbn.o $(OUTPUT_DIR)/Calculator_Cosmology.o \
-	$(OUTPUT_DIR)/CalcLike_Cosmology.o $(OUTPUT_DIR)/Likelihood_Cosmology.o $(CALCFILES) $(DATAMODULES) $(PARAMETERIZATION) $(LIKEFILES) \
+	$(OUTPUT_DIR)/CalcLike_Cosmology.o $(OUTPUT_DIR)/Likelihood_Cosmology.o $(CALCFILES) $(DATAMODULES) $(PARAMETERIZATION) $(KDEFILES) $(LIKEFILES) \
 	$(OUTPUT_DIR)/CosmologyConfig.o
 
 OBJFILES += $(COSMOFILES) $(OUTPUT_DIR)/driver.o
@@ -208,22 +199,41 @@ endif
 
 default: cosmomc
 
-$(OUTPUT_DIR)/settings.o:  $(OUTPUT_DIR)/ObjectParamNames.o
-$(OUTPUT_DIR)/propose.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/GeneralTypes.o
+$(OUTPUT_DIR)/StringUtils.o: $(OUTPUT_DIR)/MiscUtils.o
+$(OUTPUT_DIR)/RandUtils.o: $(OUTPUT_DIR)/MpiUtils.o
+$(OUTPUT_DIR)/FileUtils.o: $(OUTPUT_DIR)/MpiUtils.o $(OUTPUT_DIR)/MiscUtils.o $(OUTPUT_DIR)/StringUtils.o
+$(OUTPUT_DIR)/ObjectLists.o: $(OUTPUT_DIR)/FileUtils.o
+$(OUTPUT_DIR)/IniObjects.o: $(OUTPUT_DIR)/FileUtils.o
+$(OUTPUT_DIR)/Interpolation.o: $(OUTPUT_DIR)/ObjectLists.o
+$(OUTPUT_DIR)/Matrix_utils_new.o: $(OUTPUT_DIR)/FileUtils.o
+$(OUTPUT_DIR)/ObjectParamNames.o: $(UTILS)
+$(OUTPUT_DIR)/settings.o:  $(OUTPUT_DIR)/IniObjects.o $(OUTPUT_DIR)/ObjectParamNames.o
+$(OUTPUT_DIR)/propose.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/Matrix_utils_new.o  $(OUTPUT_DIR)/GeneralTypes.o
 $(OUTPUT_DIR)/IO.o: $(OUTPUT_DIR)/settings.o
-$(OUTPUT_DIR)/samples.o: $(OUTPUT_DIR)/settings.o
+$(OUTPUT_DIR)/samples.o: $(OUTPUT_DIR)/ObjectLists.o $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/Matrix_utils_new.o
+$(OUTPUT_DIR)/GetDist.o: $(OUTPUT_DIR)/IO.o $(OUTPUT_DIR)/samples.o
 
 $(OUTPUT_DIR)/CalcLike_Cosmology.o: $(OUTPUT_DIR)/calclike.o
 
 
 $(OUTPUT_DIR)/likelihood.o: $(OUTPUT_DIR)/GeneralTypes.o
-$(OUTPUT_DIR)/GeneralTypes.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/IO.o
+$(OUTPUT_DIR)/GeneralTypes.o: $(OUTPUT_DIR)/ObjectLists.o $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/IO.o
 $(OUTPUT_DIR)/BaseParameters.o: $(OUTPUT_DIR)/GeneralTypes.o $(OUTPUT_DIR)/IO.o  $(OUTPUT_DIR)/settings.o
 $(OUTPUT_DIR)/ParamSet.o: $(OUTPUT_DIR)/BaseParameters.o $(OUTPUT_DIR)/samples.o
 $(OUTPUT_DIR)/DataLikelihoods.o: $(OUTPUT_DIR)/likelihood.o $(OUTPUT_DIR)/ParamSet.o $(DATAMODULES)
-$(OUTPUT_DIR)/calclike.o: $(OUTPUT_DIR)/DataLikelihoods.o
+
+ifeq ($(KDE_REION_MODEL), tanh) 
+$(OUTPUT_DIR)/custom_xe_tanh.o: $(OUTPUT_DIR)/kde_reionization_tanh.o
+endif
+ifeq ($(KDE_REION_MODEL), tanh_highz) 
+$(OUTPUT_DIR)/custom_xe_tanh_highz.o: $(OUTPUT_DIR)/kde_reionization_tanh_highz.o
+endif
+
+$(OUTPUT_DIR)/KernelDensityEstimate.o: $(REIFILES) 
+
+$(OUTPUT_DIR)/calclike.o: $(OUTPUT_DIR)/DataLikelihoods.o $(OUTPUT_DIR)/KernelDensityEstimate.o
 $(OUTPUT_DIR)/ImportanceSampling.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/IO.o
-$(OUTPUT_DIR)/MCMC.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/propose.o $(OUTPUT_DIR)/ParamSet.o
+$(OUTPUT_DIR)/MCMC.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/RandUtils.o  $(OUTPUT_DIR)/propose.o $(OUTPUT_DIR)/ParamSet.o
 $(OUTPUT_DIR)/minimize.o: $(OUTPUT_DIR)/PowellConstrainedMinimize.o $(OUTPUT_DIR)/MCMC.o
 $(OUTPUT_DIR)/SampleCollector.o: $(OUTPUT_DIR)/MCMC.o
 $(OUTPUT_DIR)/GeneralSetup.o: $(OUTPUT_DIR)/SampleCollector.o $(OUTPUT_DIR)/ImportanceSampling.o  $(OUTPUT_DIR)/minimize.o
@@ -240,7 +250,7 @@ $(OUTPUT_DIR)/Likelihood_Cosmology.o: $(OUTPUT_DIR)/Calculator_Cosmology.o $(OUT
 $(OUTPUT_DIR)/CMBlikes.o: $(OUTPUT_DIR)/Likelihood_Cosmology.o
 $(OUTPUT_DIR)/CMB_BK_Planck.o: $(OUTPUT_DIR)/CMBlikes.o
 $(OUTPUT_DIR)/CMB.o: $(OUTPUT_DIR)/CMBlikes.o $(PLANCKLIKEFILES)
-$(OUTPUT_DIR)/bbn.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/likelihood.o
+$(OUTPUT_DIR)/bbn.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/likelihood.o $(OUTPUT_DIR)/Interpolation.o
 $(OUTPUT_DIR)/mpk.o: $(OUTPUT_DIR)/CosmoTheory.o $(OUTPUT_DIR)/Likelihood_Cosmology.o
 $(OUTPUT_DIR)/wigglez.o: $(OUTPUT_DIR)/mpk.o
 $(OUTPUT_DIR)/bao.o: $(OUTPUT_DIR)/Likelihood_Cosmology.o
@@ -303,20 +313,20 @@ cosmomc_debug: directories camb $(OBJFILES)
 
 
 clean: cleancosmomc
-	cd ../camb/forutils; make clean
-	cd ../camb/fortran; make clean
-
+	cd ../camb; make clean
 
 cleancosmomc:
 	rm -f $(OUTPUT_DIR)/*.o $(OUTPUT_DIR)/*.mod ../core
 	rm -rf Release*
 	rm -rf Debug*
 
+getdist: directories $(DISTFILES)
+	$(F90C) -o ../getdist $(DISTFILES) $(LAPACKL) $(GETDISTFLAGS)
 
 camb:
-	cd ../camb/fortran && \
+	cd ../camb && \
 	$(MAKE) --file=Makefile_main libcamb OUTPUT_DIR=$(OUTPUT_DIR) \
-    FORUTILSPATH=$(FORUTILSPATH)
+	RECOMBINATION=$(RECOMBINATION) EQUATIONS=equations_ppf NONLINEAR=halofit_ppf
 
 $(highL)/libhigh.a:
 	cd $(highL); make libhigh.a;
