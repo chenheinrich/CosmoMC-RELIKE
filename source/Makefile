@@ -88,6 +88,7 @@ endif
 
 MPIF90C ?= mpif90
 
+KDE_REION_MODEL ?= tanh
 
 #use "make RECOMBINATION=cosmorec" to build with CosmoRec rather than RECFAST default
 RECOMBINATION ?=recfast
@@ -156,6 +157,13 @@ endif
 
 PLANCKLIKEFILES= $(OUTPUT_DIR)/CMB_BK_Planck.o
 
+KDEFILES = $(OUTPUT_DIR)/KernelDensityEstimate.o 
+
+ifeq ($(KDE_REION_MODEL), tanh) 
+REIFILES = $(OUTPUT_DIR)/custom_xe_tanh.o $(OUTPUT_DIR)/kde_reionization_tanh.o
+KDEFILES += $(REIFILES)
+endif
+
 ifneq ($(CLIK_PATH),)
 FFLAGS += -DCLIK
 PLANCKLIKEFILES += $(OUTPUT_DIR)/cliklike.o
@@ -184,7 +192,8 @@ DATAMODULES = $(PLANCKLIKEFILES) $(OUTPUT_DIR)/mpk.o $(OUTPUT_DIR)/wigglez.o \
 DATAMODULES += $(OUTPUT_DIR)/wl.o
 
 COSMOFILES = $(OUTPUT_DIR)/CosmologyTypes.o $(OUTPUT_DIR)/CosmoTheory.o $(OUTPUT_DIR)/bbn.o $(OUTPUT_DIR)/Calculator_Cosmology.o \
-	$(OUTPUT_DIR)/CalcLike_Cosmology.o $(OUTPUT_DIR)/Likelihood_Cosmology.o $(CALCFILES) $(DATAMODULES) $(PARAMETERIZATION) $(LIKEFILES) \
+	$(OUTPUT_DIR)/CalcLike_Cosmology.o $(OUTPUT_DIR)/Likelihood_Cosmology.o $(CALCFILES) $(DATAMODULES) $(PARAMETERIZATION) \
+	$(KDEFILES) $(LIKEFILES) \
 	$(OUTPUT_DIR)/CosmologyConfig.o
 
 OBJFILES += $(COSMOFILES) $(OUTPUT_DIR)/driver.o
@@ -213,7 +222,7 @@ $(OUTPUT_DIR)/propose.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/GeneralTypes.o
 $(OUTPUT_DIR)/IO.o: $(OUTPUT_DIR)/settings.o
 $(OUTPUT_DIR)/samples.o: $(OUTPUT_DIR)/settings.o
 
-$(OUTPUT_DIR)/CalcLike_Cosmology.o: $(OUTPUT_DIR)/calclike.o
+$(OUTPUT_DIR)/CalcLike_Cosmology.o: $(OUTPUT_DIR)/calclike.o 
 
 
 $(OUTPUT_DIR)/likelihood.o: $(OUTPUT_DIR)/GeneralTypes.o
@@ -221,7 +230,14 @@ $(OUTPUT_DIR)/GeneralTypes.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/IO.o
 $(OUTPUT_DIR)/BaseParameters.o: $(OUTPUT_DIR)/GeneralTypes.o $(OUTPUT_DIR)/IO.o  $(OUTPUT_DIR)/settings.o
 $(OUTPUT_DIR)/ParamSet.o: $(OUTPUT_DIR)/BaseParameters.o $(OUTPUT_DIR)/samples.o
 $(OUTPUT_DIR)/DataLikelihoods.o: $(OUTPUT_DIR)/likelihood.o $(OUTPUT_DIR)/ParamSet.o $(DATAMODULES)
-$(OUTPUT_DIR)/calclike.o: $(OUTPUT_DIR)/DataLikelihoods.o
+
+ifeq ($(KDE_REION_MODEL), tanh) 
+$(OUTPUT_DIR)/custom_xe_tanh.o: $(OUTPUT_DIR)/kde_reionization_tanh.o
+endif
+$(OUTPUT_DIR)/KernelDensityEstimate.o: $(REIFILES) 
+
+$(OUTPUT_DIR)/calclike.o: $(OUTPUT_DIR)/DataLikelihoods.o $(OUTPUT_DIR)/KernelDensityEstimate.o
+
 $(OUTPUT_DIR)/ImportanceSampling.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/IO.o
 $(OUTPUT_DIR)/MCMC.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/propose.o $(OUTPUT_DIR)/ParamSet.o
 $(OUTPUT_DIR)/minimize.o: $(OUTPUT_DIR)/PowellConstrainedMinimize.o $(OUTPUT_DIR)/MCMC.o
