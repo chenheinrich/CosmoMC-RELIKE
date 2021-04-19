@@ -300,10 +300,14 @@
             print *, '... Done.'
         end if
 
+        print *, 'RelikeKde_OneModel ... start'
         call RelikeKde_OneModel(Params%P, LogLike, derived) 
 
-        Params%num_derived = size(derived)
-        Params%derived(1:Params%num_derived) = derived
+        print *, 'RelikeKde_OneModel ... Done'
+
+        !HACK  need to restore and not have
+        !Params%num_derived = size(derived)
+        !Params%derived(1:Params%num_derived) = derived
 
         LogLike = -1.0_mcp * log(LogLike) + 10.0_mcp
 

@@ -1,6 +1,9 @@
 module KdeReionizationTanh
   use Precision
-  use AMLutils
+  !use AMLutils
+  use MiscUtils
+  use MpiUtils, only : MpiStop
+  use cosmology
   implicit none  
 
 !This module puts smooth tanh reionization of specified mid-point (z_{re}) and width
@@ -100,7 +103,14 @@ module KdeReionizationTanh
   !CH ENDS
   !VM ENDS
   real(dl), private, parameter :: Reionization_tol = 1d-5
-  real(dl), private, external :: dtauda, rombint,rombint2
+
+  !HACK if this works remove original dtauda
+  !real(dl), private, external :: dtauda
+  procedure(obj_function):: dtauda
+ 
+
+  !HACK to remove if include cosmology works
+  !real(dl), private, external :: rombint, rombint2
   Type(ReionizationParams), private, pointer ::  ThisReion
   Type(ReionizationHistory), private, pointer :: ThisReionHist
   !VM BEGINS
@@ -119,7 +129,7 @@ contains
   	character(LEN=1024), intent(in) :: file_name
     real(dl), intent(in) :: xef,smooth_sigma
   	class(ReonizationBasis) :: this
-  	if (this%init_done .eq. .false.) then
+  	if (this%init_done .eqv. .false.) then
       ! STEP ONE: SETUP NAME OF THE FILE WITH BASIS COMPONENTS
       this%file_name = file_name
     	! STEP TWO: READ THE FILE WITH BASIS COMPONENTS
@@ -148,12 +158,12 @@ contains
 			stop
 		endif
 		! We need enough points for interpolation
-		if((this%nz .gt. 5) .ne. .true.) then
+		if((this%nz .gt. 5) .neqv. .true.) then
 			write (*,*) 'Error (reionization): insufficient number redshift bins'
 			stop
 		endif
 		! check if nbasis > 0
-    if((this%nbasis .gt. 0) .ne. .true.) then
+    if((this%nbasis .gt. 0) .neqv. .true.) then
 			write (*,*) 'Error (reionization): insufficient number of basis'
 			stop
 		endif
@@ -163,7 +173,7 @@ contains
 			write (*,*) 'Error (reionization): memory allocation failed'
 			stop
 		endif
-		if(this%input_file_format_mortoson .eq. .false.) then
+		if(this%input_file_format_mortoson .eqv. .false.) then
       ! read file
 			do i=1,this%nz,1 		  
 				! we assume first column gives z then 
@@ -195,7 +205,7 @@ contains
 		close(unit=10)
 		! check if z vector is given in asceding order 
 		do i=1,this%nz-1,1 		  
-			if( (this%z(i)<this%z(i+1)) .ne. .true.) then
+			if( (this%z(i)<this%z(i+1)) .neqv. .true.) then
 				write (*,*) 'Error (reionization): z must be given in ascending order'
 				stop
 		 	endif
@@ -405,13 +415,11 @@ contains
     real(dl) :: xstart
   	real(dl) :: tmp
   	real(dl) :: z
-	  if(use_basis .eq. .true.) then
-      	z = 1._dl/a-1._dl
-      	call xe_basis%eval_xe(z,ThisReion%fraction,z_recom,xe_recom, &
-		    ThisReion%mj, Reionization_xe2)
-  	  else
-  		call mpistop('Error (reionization): illegal call with use_basis=false')
-  	  end if
+	  
+    z = 1._dl/a-1._dl
+    call xe_basis%eval_xe(z,ThisReion%fraction,z_recom,xe_recom, &
+        ThisReion%mj, Reionization_xe2)
+
   end function Reionization_xe2
   !VM ENDS
   ! ----------------------------------------------------------------
@@ -434,7 +442,7 @@ contains
     xstart = 0._dl
     end if  
 		!VM BEGINS
-		if(use_basis .eq. .false.) then
+		if(use_basis .eqv. .false.) then
 		!VM ENDS
       xod = (ThisReionHist%WindowVarMid - 1._dl/a**Rionization_zexp)/ThisReionHist%WindowVarDelta
       if (xod > 100) then
@@ -446,8 +454,8 @@ contains
       !CH BEGINS: output xe(z) without helium if not using basis (for mj projection)
       ! file unit 54 specified in modules.f90 in subroutine inithermo
       if (.false.) then 
-        if (write_xez .eq. .true.) then
-          if(use_basis .eq. .false.) then
+        if (write_xez .eqv. .true.) then
+          if(use_basis .eqv. .false.) then
           write(54,*) (1._dl/a)-1._dl, Reionization_xe
           end if
         end if 
@@ -480,90 +488,14 @@ contains
     Reionization_timesteps = 50 
   end  function Reionization_timesteps 
   ! ----------------------------------------------------------------
-  subroutine Reionization_ReadParams(Reion, Ini)
-    use IniFile
-    Type(ReionizationParams) :: Reion
-    Type(TIniFile) :: Ini
-  	!VM BEGINS
-  	character(LEN=1024) :: file_name_basis
-    integer :: i,status
-    real(dl) :: xef,smooth_sigma
-  	!VM ENDS  
-    Reion%Reionization = Ini_Read_Logical_File(Ini,'reionization')
-    if (Reion%Reionization) then
-      Reion%use_optical_depth=Ini_Read_Logical_File(Ini,'re_use_optical_depth') 
-      if (Reion%use_optical_depth) then
-        Reion%optical_depth = Ini_Read_Double_File(Ini,'re_optical_depth')
-      else 
-        Reion%redshift = Ini_Read_Double_File(Ini,'re_redshift')
-      end if 
-  		!VM BEGINS
-  		use_basis = Ini_Read_Logical_File(Ini,'use_reionization_basis',.false.)   
-      Reion%AccBoost = &
-        Ini_Read_Double_File(Ini,'reionization_accuracy_boost',1.0_dl) 
-      !Reion%delta_redshift = Ini_Read_Double_File(Ini,'re_delta_redshift', 0.5_dl) !default similar to CMBFAST original
-      !Reion%fraction = Ini_Read_Double_File(Ini,'re_ionization_frac',Reionization_DefFraction)
-      if(use_basis .ne. .true.) then	
-  			Reion%delta_redshift = &
-  				Ini_Read_Double_File(Ini,'re_delta_redshift', 0.5_dl) 
-  				!default similar to CMBFAST original
-  		else	
-  			file_name_basis = Ini_Read_String_File(Ini,'reionization_basis')
-        xef = Ini_Read_Double_File(Ini,'xe_fiducial')
-        smooth_sigma = Ini_Read_Double_File(Ini,'smooth_sigma')
-        ! INIT BASIS AND FIDUCIAL MODEL
-  			call xe_basis%init(file_name_basis,xef,smooth_sigma)
-        Reion%nbasis = Ini_Read_Int_File(Ini,'number_used_basis')
-        if(Reion%nbasis .le. 0) then
-  	  		Reion%nbasis = xe_basis%nbasis
-  			end if								
-  			if(Reion%nbasis .gt. xe_basis%nbasis) then
-  	  	  write (*,*) 'Error (reionization): bad basis/components number'
-  	  	  stop
-  			end if
-  			if (xe_basis%nbasis .gt. reion_max_nbasis) then
-          call MpiStop('Error (reionization): nbasis is too big, change reion_max_nbasis in reionization.f90.')
-        end if
-        !allocate(Reion%mj(xe_basis%nbasis),STAT=status)
-        !if(status .ne. 0) then
-  			!	write (*,*) 'Error (reionization): memory allocation failed'
-  			!	stop
-  			!endif
-  			do i=1,xe_basis%nbasis,1
-          if(i .le.  Reion%nbasis) then
-  			    Reion%mj(i) = Ini_Read_Double_Array_File(Ini,'m_xe',i)
-          else
-            Reion%mj(i) = 0.0_dl
-          end if
-  			end do
-        ! dont need to get b_j if m_j=0 (we will use only first x PCs)
-        xe_basis%nbasis = Reion%nbasis 			 				
-  			Reion%delta_redshift = 0.0
-  		end if
-      ! this will be xe after reionization (at low redshift: default is 1)
-      Reion%fraction = &
-       Ini_Read_Double_File(Ini,'re_ionization_frac',Reionization_DefFraction)
-      !VM ADD HELIUM FROM INI AS IT IS DONE IN MORE MODERN CAMB (STANDALONE)
-      helium_fullreion_redshift = &
-  			Ini_Read_Double_File(Ini,'re_helium_redshift', 3.5_dl)
-      helium_fullreion_deltaredshift = & 
-  			Ini_Read_Double_File(Ini,'re_helium_delta_redshift', 0.5_dl)
-      helium_fullreion_redshiftstart  = &   
-        Ini_Read_Double_File(Ini,'re_helium_redshiftstart', &
-        helium_fullreion_redshift + 3*helium_fullreion_deltaredshift)
-      !VM ENDS
-    end if
-  end subroutine Reionization_ReadParams 
+
   ! ----------------------------------------------------------------
   subroutine Reionization_SetParamsForZre(Reion,ReionHist)
-    use AMLutils
+    !use AMLutils
+    use MiscUtils
     Type(ReionizationParams), target :: Reion
     Type(ReionizationHistory), target :: ReionHist 
-  	!VM BEGINS
-  	if(use_basis .eq. .true.) then	
-  		call MpiStop('Error (reionization): illegal call with use_basis=true')
-  	end if
-  	!VM ENDS	  
+	  
     Reion%delta_redshift = 0.015 * (1._dl + Reion%redshift)
     ReionHist%WindowVarMid = (1._dl+Reion%redshift)**Rionization_zexp
     ReionHist%WindowVarDelta = Rionization_zexp*&
@@ -585,10 +517,12 @@ contains
     ReionHist%tau_complete=tau0
     ThisReion => Reion
     ThisReionHist => ReionHist
-    
+
+    !HACK to remove print statements
+    print *, 'Entering Reionization_Init'
  		!VM BEGINS
     !if (Reion%Reionization) then
- 		if (Reion%Reionization .and. (use_basis .ne. .true.)) then
+ 		if (Reion%Reionization .and. (use_basis .neqv. .true.)) then
  	  !VM ENDS
       if (Reion%optical_depth /= 0._dl .and. .not. Reion%use_optical_depth) &
         write (*,*) 'WARNING: You seem to have set the optical depth, but use_optical_depth = F'
@@ -600,22 +534,29 @@ contains
     end if    
 		!VM BEGINS
     !if (Reion%Reionization) then
-    if (Reion%Reionization .and. (use_basis .ne. .true.)) then
+    if (Reion%Reionization .and. (use_basis .neqv. .true.)) then
 		!VM ENDS
       if (Reion%fraction==Reionization_DefFraction) &
          Reion%fraction = 1._dl + ReionHist%fHe  !H + singly ionized He
+
+       !HACK  
+       print *, 'Calling Reionization_SetFromOptDepth'
       if (Reion%use_optical_depth) then
         call Reionization_SetFromOptDepth(Reion,ReionHist)
         if (FeedbackLevel > 0)  then
           write(*,'("Reion redshift       =  ",f6.3)') Reion%redshift
         end if
       end if
+      print *, 'Done calling Reionization_SetFromOptDepth'
+      print *, 'Calling Reionization_SetParamsForZre'
       call Reionization_SetParamsForZre(ThisReion,ThisReionHist) 
+      print *, 'Done calling Reionization_SetParamsForZre'
       !this is a check, agrees very well in default parameterization
       if (FeedbackLevel > 1) write(*,'("Integrated opt depth = ",f7.4)') &
             Reionization_GetOptDepth(Reion, ReionHist)          
       !Get relevant times       
       astart=1.d0/(1.d0+Reion%redshift + Reion%delta_redshift*8)
+
       ReionHist%tau_start = max(0.05_dl, rombint(dtauda,0._dl,astart,1d-3))
           !Time when a very small reionization fraction (assuming tanh fitting)
       ReionHist%tau_complete = min(tau0,ReionHist%tau_start+ rombint(dtauda,& 
@@ -682,7 +623,7 @@ contains
     logical, intent(inout) :: OK
     !VM BEGINS
     !if (Reion%Reionization) then
-    if (Reion%Reionization .and. (use_basis .ne. .true.)) then
+    if (Reion%Reionization .and. (use_basis .neqv. .true.)) then
     !VM ENDS
       if (Reion%use_optical_depth) then
         if (Reion%optical_depth<0 .or. Reion%optical_depth > 0.9  .or. &
@@ -719,34 +660,94 @@ contains
    real(dl), intent(in) :: z
    real(dl) a
    a = 1._dl/(1._dl+z)
-   !VM BEGINS
- 	 if(use_basis .eq. .true.) then	
- 		call MpiStop('Error (reionization): illegal function call')
- 	 end if
+
+   print *, 'Entering Reionization_doptdepth_dz'
+   print *, 'dtauda(a)', dtauda(a)
    Reionization_doptdepth_dz = &
        Reionization_xe(a)*ThisReionHist%akthom*dtauda(a)
    !VM ENDS
   end function Reionization_doptdepth_dz
+
+
+ !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+    function rombint2(f,a,b,tol, maxit, minsteps)
+        use precision
+!  Rombint returns the integral from a to b of using Romberg integration.
+!  The method converges provided that f(x) is continuous in (a,b).
+!  f must be real(dl) and must be declared external in the calling
+!  routine.  tol indicates the desired relative accuracy in the integral.
+
+! Modified by AL to specify max iterations and minimum number of steps
+! (min steps useful to stop wrong results on periodic or sharp functions)
+        implicit none
+        integer, parameter :: MAXITER=20,MAXJ=5
+        dimension g(MAXJ+1)
+        real(dl) f
+        external f
+        real(dl) :: rombint2
+        real(dl), intent(in) :: a,b,tol
+        integer, intent(in):: maxit,minsteps
+     
+        integer :: nint, i, k, jmax, j
+        real(dl) :: h, gmax, error, g, g0, g1, fourj
+      
+        h=0.5d0*(b-a)
+        gmax=h*(f(a)+f(b))
+        g(1)=gmax
+        nint=1
+        error=1.0d20
+        i=0
+        do
+          i=i+1
+          if (i > maxit.or.(i > 5.and.abs(error) < tol) .and. nint > minsteps) exit
+!  Calculate next trapezoidal rule approximation to integral.
+          g0=0._dl
+          do k=1,nint
+            g0=g0+f(a+(k+k-1)*h)
+          end do
+          g0=0.5d0*g(1)+h*g0
+          h=0.5d0*h
+          nint=nint+nint
+          jmax=min(i,MAXJ)
+          fourj=1._dl
+          do j=1,jmax
+!  Use Richardson extrapolation.
+            fourj=4._dl*fourj
+            g1=g0+(g0-g(j))/(fourj-1._dl)
+            g(j)=g0
+            g0=g1
+          end do  
+          if (abs(g0).gt.tol) then
+            error=1._dl-gmax/g0
+          else
+            error=gmax
+          end if
+          gmax=g0
+          g(jmax+1)=g0
+        end do
+  
+        rombint2=g0
+        if (i > maxit .and. abs(error) > tol)  then
+          write(*,*) 'Warning: Rombint2 failed to converge; '
+          write (*,*)'integral, error, tol:', rombint2,error, tol
+        end if
+        
+    end function rombint2
   
   function Reionization_GetOptDepth(Reion, ReionHist) 
     Type(ReionizationParams), target :: Reion
     Type(ReionizationHistory), target :: ReionHist
-    real(dl) Reionization_GetOptDepth      
-		!VM BEGINS
-		real (dl) :: a, b
-		integer :: status
-		!VM ENDS
+    real(dl) Reionization_GetOptDepth     
+
     ThisReion => Reion
     ThisReionHist => ReionHist 
-    !VM BEGINS
-  	if(use_basis .eq. .true.) then	
-      call MpiStop('Error (reionization): tau not calculated')
-    else
+
+  	if(use_basis .eqv. .false.) then	
       Reionization_GetOptDepth =  &
         rombint2(Reionization_doptdepth_dz,0.d0,Reionization_maxz,&
         Reionization_tol, 20, nint(Reionization_maxz/Reion%delta_redshift*5))
     end if
-    !VM ENDS
+
   end function Reionization_GetOptDepth
   
   subroutine Reionization_zreFromOptDepth(Reion, ReionHist)
@@ -757,34 +758,40 @@ contains
     real(dl) try_b, try_t
     real(dl) tau
     integer i
-  	!VM BEGINS
-  	if(use_basis .eq. .true.) then	
-  		call MpiStop('Error (reionization): illegal function call')
-  	end if
-  	!VM ENDS
-    try_b = 0
-    try_t = Reionization_maxz
-    i=0
-    do 
-      i=i+1  
-      Reion%redshift = (try_t + try_b)/2
-      call Reionization_SetParamsForZre(Reion,ReionHist)
-      tau = Reionization_GetOptDepth(Reion, ReionHist)
-      if (tau > Reion%optical_depth) then
-        try_t = Reion%redshift
-      else
-        try_b = Reion%redshift
-      end if
-      if (abs(try_b - try_t) < 2e-3/Reionization_AccuracyBoost) exit
-      if (i>100) then
-        call mpiStop('Reionization_zreFromOptDepth: failed to converge')
-      end if
-    end do
-    if (abs(tau - Reion%optical_depth) > 0.002) then
-      write(*,*) 'Reionization_zreFromOptDepth: Did not converge to optical depth'
-      write(*,*) 'tau =',tau, 'optical_depth = ', Reion%optical_depth
-      write(*,*) try_t, try_b
-      call mpiStop()
+
+  	if(use_basis .eqv. .false.) then	
+
+        try_b = 0
+        try_t = Reionization_maxz
+        i=0
+        do 
+        i=i+1  
+        Reion%redshift = (try_t + try_b)/2
+        call Reionization_SetParamsForZre(Reion,ReionHist)
+        tau = Reionization_GetOptDepth(Reion, ReionHist)
+        if (tau > Reion%optical_depth) then
+            try_t = Reion%redshift
+        else
+            try_b = Reion%redshift
+        end if
+        if (abs(try_b - try_t) < 2e-3/Reionization_AccuracyBoost) exit
+        
+        
+        !HACK need to put in proper stop command
+        if (i>100) then
+            call mpiStop('Reionization_zreFromOptDepth: failed to converge')
+            !stop
+        end if
+        end do
+        if (abs(tau - Reion%optical_depth) > 0.002) then
+            write(*,*) 'Reionization_zreFromOptDepth: Did not converge to optical depth'
+            write(*,*) 'tau =',tau, 'optical_depth = ', Reion%optical_depth
+            write(*,*) try_t, try_b
+            !stop
+        !HACK need to put in proper stop command
+            call mpiStop('Reionization_zreFromOptDepth: Did not converge to optical depth')
+        end if
+
     end if
   end subroutine Reionization_zreFromOptDepth 
 
@@ -796,16 +803,13 @@ contains
     real(dl) dz, optd
     real(dl) z, tmp, tmpHe
     integer na    
-		!VM BEGINS
-		if(use_basis .eq. .true.) then	
-			call mpiStop('Error (reionization): illegal function call')
-			stop
-		end if
-		!VM ENDS
+
+    print *, 'Entering Reionization_SetFromOptDepth'
     Reion%redshift = 0
     if (Reion%Reionization .and. Reion%optical_depth /= 0) then
       !Do binary search to find zre from z
       !This is general method
+      print *, 'Entering Reionization_zreFromOptDepth'
       call Reionization_zreFromOptDepth(Reion, ReionHist)
       if (.false.) then
         !Use equivalence with sharp for special case
