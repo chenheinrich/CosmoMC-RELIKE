@@ -106,7 +106,7 @@ module KdeReionizationTanh
 
   !HACK if this works remove original dtauda
   !real(dl), private, external :: dtauda
-  procedure(obj_function):: dtauda
+  !procedure(obj_function):: dtauda
  
 
   !HACK to remove if include cosmology works
@@ -125,6 +125,55 @@ module KdeReionizationTanh
 contains
 	!VM BEGINS
   ! ----------------------------------------------------------------
+
+  !Background evolution
+function dtauda_fixed_cosmology(a)
+    !get d tau / d a
+    use precision
+    !use ModelParams
+    use MassiveNu
+    !use LambdaGeneral
+    implicit none
+    real(dl) dtauda_fixed_cosmology
+    real(dl), intent(IN) :: a
+    real(dl) rhonu,grhoa2, a2, pnu
+    integer nu_i
+    
+    !HACK KDE to get tau -- need some clean up here!
+    ! output from equations.f90 used when calling ./camb in camb directory
+    real(dl) :: grhok = 0.000000000000000E+000
+    real(dl) :: grhoc = 3.995382819431314E-008
+    real(dl) :: grhob = 7.424529124136492E-009
+    real(dl) :: grhog = 8.260148100755502E-012
+    real(dl) :: w_lam = -1.00000000000000     
+    real(dl) :: grhornomass = 3.809408986356058E-012
+    real(dl) :: grhov = 1.035798870387910E-007
+
+    real(dl) :: Num_Nu_massive = 1
+    real(dl) :: nu_mass_eigenstates = 1
+
+    real(dl) :: nu_masses = 353.712881263422     
+    real(dl) :: grhormass = 1.903307442173650E-012
+    
+    a2=a**2
+    !  8*pi*G*rho*a**4.
+    grhoa2=grhok*a2+(grhoc+grhob)*a+grhog+grhornomass
+    !if (is_cosmological_constant) then
+    grhoa2=grhoa2+grhov*a2**2
+    !else
+    !    grhoa2=grhoa2+ grho_de(a)
+    !end if
+
+	if (Num_Nu_massive /= 0) then
+		!Get massive neutrino density relative to massless
+        !call Nu_rho(a*nu_masses,rhonu)
+        call ThermalNuBackground%rho_P(a*nu_masses, rhonu, pnu)
+        grhoa2=grhoa2+rhonu*grhormass
+	end if
+    dtauda_fixed_cosmology=sqrt(3/grhoa2)
+
+end function dtauda_fixed_cosmology
+
   subroutine reonizationbasis_init(this,file_name,xef,smooth_sigma) 
   	character(LEN=1024), intent(in) :: file_name
     real(dl), intent(in) :: xef,smooth_sigma
@@ -518,12 +567,8 @@ contains
     ThisReion => Reion
     ThisReionHist => ReionHist
 
-    !HACK to remove print statements
-    print *, 'Entering Reionization_Init'
- 		!VM BEGINS
-    !if (Reion%Reionization) then
- 		if (Reion%Reionization .and. (use_basis .neqv. .true.)) then
- 	  !VM ENDS
+ 	if (Reion%Reionization .and. (use_basis .neqv. .true.)) then
+ 	  
       if (Reion%optical_depth /= 0._dl .and. .not. Reion%use_optical_depth) &
         write (*,*) 'WARNING: You seem to have set the optical depth, but use_optical_depth = F'
       
@@ -531,37 +576,34 @@ contains
         .or. .not.Reion%use_optical_depth .and. Reion%Redshift<0.001) then
              Reion%Reionization = .false.
       end if  
+
     end if    
-		!VM BEGINS
-    !if (Reion%Reionization) then
+
     if (Reion%Reionization .and. (use_basis .neqv. .true.)) then
-		!VM ENDS
+		
       if (Reion%fraction==Reionization_DefFraction) &
          Reion%fraction = 1._dl + ReionHist%fHe  !H + singly ionized He
 
-       !HACK  
-       print *, 'Calling Reionization_SetFromOptDepth'
       if (Reion%use_optical_depth) then
         call Reionization_SetFromOptDepth(Reion,ReionHist)
         if (FeedbackLevel > 0)  then
           write(*,'("Reion redshift       =  ",f6.3)') Reion%redshift
         end if
       end if
-      print *, 'Done calling Reionization_SetFromOptDepth'
-      print *, 'Calling Reionization_SetParamsForZre'
+      
       call Reionization_SetParamsForZre(ThisReion,ThisReionHist) 
-      print *, 'Done calling Reionization_SetParamsForZre'
+      
       !this is a check, agrees very well in default parameterization
       if (FeedbackLevel > 1) write(*,'("Integrated opt depth = ",f7.4)') &
             Reionization_GetOptDepth(Reion, ReionHist)          
       !Get relevant times       
       astart=1.d0/(1.d0+Reion%redshift + Reion%delta_redshift*8)
 
-      ReionHist%tau_start = max(0.05_dl, rombint(dtauda,0._dl,astart,1d-3))
+      ReionHist%tau_start = max(0.05_dl, rombint(dtauda_fixed_cosmology,0._dl,astart,1d-3))
           !Time when a very small reionization fraction (assuming tanh fitting)
-      ReionHist%tau_complete = min(tau0,ReionHist%tau_start+ rombint(dtauda,& 
+      ReionHist%tau_complete = min(tau0,ReionHist%tau_start+ rombint(dtauda_fixed_cosmology,& 
        astart,1.d0/(1.d0+max(0.d0,Reion%redshift-Reion%delta_redshift*8)),1d-3))
-    !VM BEGINS
+
     else if (Reion%Reionization .and. use_basis) then
       if(Reion%fraction==Reionization_DefFraction) then
         Reion%fraction = 1._dl + ReionHist%fHe  !H + singly ionized He
@@ -578,7 +620,7 @@ contains
       zstart = 55.0_dl
       !CH ENDS (changed for zmax = 50)
       astart = 1.d0/(1.d0+zstart)  
-      ReionHist%tau_start =  max(0.05_dl,rombint(dtauda,0.0_dl,astart,epsrel))
+      ReionHist%tau_start =  max(0.05_dl,rombint(dtauda_fixed_cosmology,0.0_dl,astart,epsrel))
       ! eta COMPLETE --- not including helium - why even std camb does that??   
       !CH temp begins
       !zend = (1+xe_basis%zmin)*exp(-8.0*xe_basis%fine%sigma)-1  
@@ -586,7 +628,7 @@ contains
       !CH temp ends 
       zend = max(zend, 0.5)
       aend = 1.d0/(1.d0+zend)
-      ReionHist%tau_complete = min(tau0,rombint(dtauda,0.0_dl,aend,epsrel))
+      ReionHist%tau_complete = min(tau0,rombint(dtauda_fixed_cosmology,0.0_dl,aend,epsrel))
     
       ! eta ends -------		
     end if   
@@ -660,11 +702,9 @@ contains
    real(dl), intent(in) :: z
    real(dl) a
    a = 1._dl/(1._dl+z)
-
-   print *, 'Entering Reionization_doptdepth_dz'
-   print *, 'dtauda(a)', dtauda(a)
+   
    Reionization_doptdepth_dz = &
-       Reionization_xe(a)*ThisReionHist%akthom*dtauda(a)
+       Reionization_xe(a)*ThisReionHist%akthom*dtauda_fixed_cosmology(a)
    !VM ENDS
   end function Reionization_doptdepth_dz
 
@@ -804,12 +844,10 @@ contains
     real(dl) z, tmp, tmpHe
     integer na    
 
-    print *, 'Entering Reionization_SetFromOptDepth'
     Reion%redshift = 0
     if (Reion%Reionization .and. Reion%optical_depth /= 0) then
       !Do binary search to find zre from z
       !This is general method
-      print *, 'Entering Reionization_zreFromOptDepth'
       call Reionization_zreFromOptDepth(Reion, ReionHist)
       if (.false.) then
         !Use equivalence with sharp for special case
@@ -822,9 +860,9 @@ contains
         do while (optd < Reion%optical_depth)
           z=na*dz
           if(include_helium_fullreion .and. z < helium_fullreion_redshift) then
-          optd=optd+ tmpHe*dtauda(1._dl/(1._dl+z))
+          optd=optd+ tmpHe*dtauda_fixed_cosmology(1._dl/(1._dl+z))
           else
-          optd=optd+tmp*dtauda(1._dl/(1._dl+z))
+          optd=optd+tmp*dtauda_fixed_cosmology(1._dl/(1._dl+z))
           end if
           na=na+1
         end do
@@ -833,6 +871,8 @@ contains
       Reion%Reionization = .false.
     end if
   end  subroutine Reionization_SetFromOptDepth 
+
+  
 
 end module KdeReionizationTanh
 

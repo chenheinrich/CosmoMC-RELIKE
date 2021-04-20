@@ -228,7 +228,6 @@ contains
     integer :: status, row
     integer :: j, num_params
 
-    print *, 'Kde_CalcDerivedParams: entering Kde_CalcDerivedParams'
     allocate(mjs(5), transformed_parameters(1), derived_parameters(6), STAT=status) !might want to add mjs as derived parameters
 		if(status .ne. 0) then
 			write (*,*) 'Error (KernelDensityEstimate): memory allocation failed'
@@ -236,7 +235,6 @@ contains
 		endif
 
     ! Get mjs for xe(z) with parameters in param_array 
-    print *, 'Kde_CalcDerivedParams: calling get_transformed_parameters'
     call get_transformed_parameters(parameters, transformed_parameters)
 
     call ThisKde%get_mjs(transformed_parameters, mjs)
@@ -248,7 +246,6 @@ contains
       derived_parameters(num_params) = transformed_parameters(j)
     end do
 
-    print *, 'Kde_CalcDerivedParams: done getting mjs'
     do j = 1, 5
       num_params = num_params + 1
       derived_parameters(num_params) = mjs(j)
@@ -276,24 +273,17 @@ contains
 			stop
 		endif
 
-    !HACK remove all print statemetes in this subroutine
-    print *, 'Entering RelikeKde_OneModel'
     call Kde_CalcDerivedParams(parameters, derived_parameters)
-    print *, 'Done CalcDerivedParams'
 
     do j = 1, 5
       mjs(j) = derived_parameters(1+j)
     end do
-
-    print *, 'Done assigning mjs'
 
     if (ThisKde%kde_params%kde_or_gaussian == 'kde') then
       call ThisKde%kde_impl(mjs, likelihood)
     else if (ThisKde%kde_params%kde_or_gaussian == 'gaussian') then
       call ThisKde%gauss_impl(mjs, likelihood)
     end if
-
-    print *, 'Done calling impl'
     
   end subroutine RelikeKde_OneModel
 

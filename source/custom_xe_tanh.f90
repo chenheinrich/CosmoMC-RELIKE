@@ -76,7 +76,6 @@ subroutine reion_init(use_optical_depth_in, var_value, include_helium_fullreion_
     real(mcp) :: YHe = 0.2453368, akthom = 3.867559814364194E-007, tau0 = 14172.4718396201 
     integer :: FeedbackLevel = 0
 
-    print *, 'Entering reion_init'
     call Reionization_SetDefParams_KDE(Reion, include_helium_fullreion_in) 
     Reion%use_optical_depth = use_optical_depth_in
 
@@ -86,12 +85,9 @@ subroutine reion_init(use_optical_depth_in, var_value, include_helium_fullreion_
         Reion%redshift = var_value
     end if
 
-    print *, 'calling ThremalNuBackground%Init()'
-
     !call init_massive_nu(.true.) ! needed for getting dt/da
     call ThermalNuBackground%Init()
 
-    print *, 'calling Reionization_Init()'
     call Reionization_Init(Reion, ReionHist, YHe, akthom, tau0, FeedbackLevel)
 
 end subroutine reion_init
@@ -111,8 +107,6 @@ subroutine get_zre_from_tau(tau, zre)
 
     Type(ReionizationParams) :: Reion
     Type(ReionizationHistory) :: ReionHist 
-
-    print *, 'Entering get_zre_from_tau'
     
     call reion_init(USE_OPTICAL_DEPTH_TRUE, tau, INCLUDE_HELIUM_TRUE , Reion, ReionHist)
     
