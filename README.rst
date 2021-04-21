@@ -2,7 +2,7 @@
 CosmoMC-relike
 ===================
 :CosmoMC-relike: Extended CosmoMC with RELIKE (Reionization Effective Likelihood)
-:Homepage: http://cosmologist.info/cosmomc/
+:Homepage: https://github.com/chenheinrich/CosmoMC-relike
 
 Description and installation
 =============================
@@ -44,7 +44,7 @@ For more information on CosmoMC and getdist (the plotting package), see https://
   
   `mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini`
   
-  
+
 Using the code
 ==================
 
@@ -70,6 +70,6 @@ Branches
 
 The master branch contains latest changes to the main release version.
 
-The devel branch is a development branch.
+The develop branch is a development branch.
 
 =============
