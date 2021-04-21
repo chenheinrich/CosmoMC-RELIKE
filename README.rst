@@ -9,7 +9,7 @@ Description and installation
 
 CosmoMC-relike uses the generic sampler of CosmoMC to sample the fortran implementation of the `relike` likelihood. 
 
-For more information on CosmoMC and getdist (the plotting package), see https://cosmologist.info/cosmomc/readme.html.
+For more information on CosmoMC and getdist (the plotting package), see `here <https://cosmologist.info/cosmomc/readme.html>`_ 
 
 - Install/Load MPI (optional)
 
@@ -23,7 +23,7 @@ For more information on CosmoMC and getdist (the plotting package), see https://
 
   git clone --recurse-submodules
 
-  If you already used `git clone` without getting the submodules, use:
+If you already used `git clone` without getting the submodules, use:
 ::
 
   git submodule update --init --recursive
@@ -47,13 +47,13 @@ For more information on CosmoMC and getdist (the plotting package), see https://
 - Run an example of tanh chains in Gaussian mode: 
 ::
 
-  ./cosmomc relike_example_tanh_gauss_chains.ini
-  
-  or with MPI:
-::  
+   ./cosmomc relike_example_tanh_gauss_chains.ini
+   
+or with MPI:
+::
+   
+   mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini
 
-  mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini
-  
   
 Using the code
 ==================
@@ -69,10 +69,10 @@ Related code
 ==================
 
 The Python package `relike <https://github.com/chenheinrich/RELIKE>`_ is a python 
-version of the reionization effective likelihood code used in CosmoMC-relike. It 
-includes only the Gaussian approximation mode for now (it does not have the KDE mode).
-You can easily incorporate the python likelihood with other samplers such as `Cobaya <https://github.com/CobayaSampler/cobaya>`_
-or `CosmoSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>>`_.
+version of the reionization effective likelihood code used in CosmoMC-relike. 
+- It includes only the Gaussian approximation mode for now (it does not have the KDE mode).
+- You can easily incorporate the python likelihood with other samplers such as `Cobaya <https://github.com/CobayaSampler/cobaya>`_
+or `CosmoSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>`_ 
 
 Branches
 =============================
