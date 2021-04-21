@@ -1,49 +1,75 @@
 ===================
-CosmoMC
+CosmoMC-relike
 ===================
-:CosmoMC:  Fortran 2008 parallelized MCMC sampler (general and cosmology)
+:CosmoMC-relike: Extended CosmoMC with RELIKE (Reionization Effective Likelihood)
 :Homepage: http://cosmologist.info/cosmomc/
 
 Description and installation
 =============================
 
-For full details see the `ReadMe <http://cosmologist.info/cosmomc/readme.html>`_.
+CosmoMC-relike uses the generic sampler of CosmoMC to sample the fortran implementation of the `relike` likelihood. 
+
+For more information on CosmoMC and getdist (the plotting package), see https://cosmologist.info/cosmomc/readme.html.
+
+- Install/Load MPI (optional)
+
+  It is recommended to load/install MPI for running chains. To do so
+  
+  - On a cluster: Find and load the MPI module (e.g. `openmpi`, `mpich` or `pmi`) on the cluster using `module avail` and `module load XX`; consult the cluster’s user guidelines).
+  - On a laptop: Install OpenMPI (https://www.open-mpi.org/) using your system’s package manager (`sudo apt install libopenmpi` in Debian-based systems)
+
+- Use `git clone --recurse-submodules` if you are cloning this repo for the first time.
+
+  Use `git submodule update --init --recursive` if you already used `git clone` without getting the submodules. 
+
+- Compile the code: 
+
+  `cd CosmoMC-relike/cosmomc`
+  
+  `make`
+  
+- Untar the chain files used for KDE:
+
+  `tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/`
+
+- Run an example by outputting a single point: 
+
+  `./cosmomc relike_example_tanh_kde_single_point.ini`
+
+- Run an example of tanh chains in Gaussian mode: 
+
+  `./cosmomc relike_example_tanh_gauss_chains.ini`
+  
+  or with MPI:
+  
+  `mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini`
+  
+  
+Using the code
+==================
+
+<more description goes here.>
 
 Algorithm details
 ==================
 
-See the latest `paper <http://arxiv.org/abs/1304.4473>`_.
-
-GetDist
-===================
-
-CosmoMC includes the GetDist python sample analysis and plotting package, which is
-also `available separately <http://getdist.readthedocs.org/en/latest/>`_.
+See the latest `paper <http://arxiv.org/abs/...>`_. <to be added>
 
 Related code
 ==================
 
-The new Python `Cobaya <https://github.com/CobayaSampler/cobaya>`_ sampling package incorporates a 
-version of CosmoMC's sampler and most other CosmoMC features, but has more general speed optimization and
-general support of multiple inter-dependent theory and likelihood codes.
-
+The Python package `relike <https://github.com/chenheinrich/RELIKE>`_ is a python 
+version of the reionization effective likelihood code used in CosmoMC-relike. It 
+includes only the Gaussian approximation mode for now (it does not have the KDE mode).
+You can easily incorporate the python likelihood with other samplers such as 
+`Cobaya <https://github.com/CobayaSampler/cobaya>` or 
+`COSMOSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>`. 
 
 Branches
 =============================
 
-The master branch contains latest changes to the main release version, using latest CAMB 1.x.
-
-.. image:: https://travis-ci.org/cmbant/CosmoMC.svg?branch=master
-  :target: https://travis-ci.org/cmbant/CosmoMC/builds
-
-The planck2018 branch contains the configuration used for the final Planck 2018 analysis, with 
-corresponding CAMB version.
+The master branch contains latest changes to the main release version.
 
 The devel branch is a development branch.
 
 =============
-
-.. raw:: html
-
-    <a href="http://www.sussex.ac.uk/astronomy/"><img src="https://cdn.cosmologist.info/antony/Sussex.png" height="170px"></a>
-    <a href="http://erc.europa.eu/"><img src="https://erc.europa.eu/sites/default/files/content/erc_banner-vertical.jpg" height="200px"></a>

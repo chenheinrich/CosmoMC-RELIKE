@@ -28,13 +28,13 @@ module KernelDensityEstimate
 
     !default used if input not specified 
     real(mcp) :: default_fcov = 0.14_mcp
-    character(LEN=1024) :: default_fn_pc = 'kde_data/pl18_zmax30/pc.dat'
-    character(LEN=1024) :: default_fn_invcov= "kde_data/pl18_zmax30/invcov.dat"
-    character(LEN=1024) :: default_fn_invcov_spec= "kde_data/pl18_zmax30/invcov_spec.dat"
+    character(LEN=1024) :: default_fn_pc = 'relike_data/pl18_zmax30/pc.dat'
+    character(LEN=1024) :: default_fn_invcov= "relike_data/pl18_zmax30/invcov.dat"
+    character(LEN=1024) :: default_fn_invcov_spec= "relike_data/pl18_zmax30/invcov_spec.dat"
 
-    character(LEN=1024) :: default_fn_mean= "kde_data/pl18_zmax30/mean.dat"
-    character(LEN=1024) :: default_fn_chain = 'kde_data/pl18_zmax30/chains/chains.txt'  
-    character(LEN=1024) :: default_fn_chain_spec = 'kde_data/pl18_zmax30/chains/spec.txt'
+    character(LEN=1024) :: default_fn_mean= "relike_data/pl18_zmax30/mean.dat"
+    character(LEN=1024) :: default_fn_chain = 'relike_data/pl18_zmax30/chains/chains.txt'  
+    character(LEN=1024) :: default_fn_chain_spec = 'relike_data/pl18_zmax30/chains/spec.txt'
 
     character(LEN=1024) :: default_kde_or_gaussian = 'kde'
     
