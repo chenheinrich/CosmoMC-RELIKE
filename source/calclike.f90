@@ -4,6 +4,7 @@
     use BaseParameters
     use MatrixUtils
     use MiscUtils
+    use Relike 
     implicit none
     private
 
@@ -29,8 +30,12 @@
     end type TLikeCalculator
 
     type, extends(TLikeCalculator) :: TGenericLikeCalculator
+    type(RelikeKde) :: Kde 
+    type(RelikeKdeChains):: KdeChains
+
     contains
     procedure :: GetLogLikeMain => Generic_GetLogLikeMain
+    procedure :: ReadParams => TGenericLikeCalculator_ReadParams
     end type TGenericLikeCalculator
 
     type, extends(TLikeCalculator) :: TTheoryLikeCalculator
@@ -177,6 +182,16 @@
 
     end subroutine TLikeCalculator_ReadParams
 
+    subroutine TGenericLikeCalculator_ReadParams(this, Ini)
+    class(TGenericLikeCalculator) :: this
+    class(TSettingIni) :: Ini
+    real(mcp) fcov
+
+    call TLikeCalculator_ReadParams(this, Ini)
+    call kde_read_params(this%Kde%kde_params, Ini)
+
+    end subroutine TGenericLikeCalculator_ReadParams
+
     function TLikeCalculator_TestLikelihoodFunction(this,Params) result(LogLike)
     class(TLikeCalculator) :: this
     class(TCalculationAtParamPoint) Params
@@ -257,7 +272,7 @@
     end subroutine TLikeCalculator_WriteParamPointTextData
 
 
-    function Generic_GetLogLikeMain(this, Params) result(LogLike)!Get -Ln(Likelihood) for chains
+    function Generic_GetLogLikeMain_Original(this, Params) result(LogLike)!Get -Ln(Likelihood) for chains
     class(TGenericLikeCalculator) :: this
     class(TCalculationAtParamPoint) :: Params
     real(mcp) LogLike
@@ -268,8 +283,33 @@
     !LogLike = LogZero
     !call MpiStop('Generic_GetLogLikeMain: need to write this function!')
 
-    end function Generic_GetLogLikeMain
+    end function Generic_GetLogLikeMain_Original
 
+    function Generic_GetLogLikeMain(this, Params) result(LogLike)!Get -Ln(Likelihood) for chains
+        class(TGenericLikeCalculator) :: this
+        class(TCalculationAtParamPoint) :: Params
+        real(mcp) LogLike
+        real(mcp) :: tmp, xe
+        logical, save :: FirstCall = .TRUE.
+        real(mcp), dimension(:), allocatable :: derived
+
+        if (FirstCall) then
+            print *, 'Setting up RELIKE module...'
+            call RelikeKde_Init(this%Kde, this%KdeChains)
+            FirstCall = .FALSE.
+            print *, '... Done.'
+        end if
+
+        call RelikeKde_OneModel(Params%P, LogLike, derived) 
+
+        LogLike = -1.0_mcp * LogLike + 10.0_mcp
+
+        !If you want to print mjs, uncomment below 
+        ! and add m1, m2, m3, m4, m5 in your .paramname file
+        !Params%num_derived = size(derived)
+        !Params%derived(1:Params%num_derived) = derived
+
+    end function Generic_GetLogLikeMain
 
     subroutine TheoryLike_SetTheoryParams(this, Params)
     class(TTheoryLikeCalculator) :: this
@@ -313,7 +353,7 @@
     end if
     if (LogLike==logZero) return
 
-    if (Feedback>2) call DataLikelihoods%WriteLikelihoodContribs(stdout, Params%likelihoods)
+    !if (Feedback>2) call DataLikelihoods%WriteLikelihoodContribs(stdout, Params%likelihoods)
 
     end function TheoryLike_GetLogLikeMain
 
