@@ -302,12 +302,12 @@
 
         call RelikeKde_OneModel(Params%P, LogLike, derived) 
 
+        LogLike = -1.0_mcp * LogLike + 10.0_mcp
+
         !If you want to print mjs, uncomment below 
         ! and add m1, m2, m3, m4, m5 in your .paramname file
         !Params%num_derived = size(derived)
         !Params%derived(1:Params%num_derived) = derived
-
-        LogLike = -1.0_mcp * LogLike + 10.0_mcp
 
     end function Generic_GetLogLikeMain
 
