@@ -157,10 +157,10 @@ endif
 
 PLANCKLIKEFILES= $(OUTPUT_DIR)/CMB_BK_Planck.o
 
-KDEFILES = $(OUTPUT_DIR)/KernelDensityEstimate.o 
+KDEFILES = $(OUTPUT_DIR)/relike.o 
 
 ifeq ($(KDE_REION_MODEL), tanh) 
-REIFILES = $(OUTPUT_DIR)/custom_xe_tanh.o $(OUTPUT_DIR)/kde_reionization_tanh.o
+REIFILES = $(OUTPUT_DIR)/relike_xe.o $(OUTPUT_DIR)/xe_tanh.o
 KDEFILES += $(REIFILES)
 endif
 
@@ -232,11 +232,11 @@ $(OUTPUT_DIR)/ParamSet.o: $(OUTPUT_DIR)/BaseParameters.o $(OUTPUT_DIR)/samples.o
 $(OUTPUT_DIR)/DataLikelihoods.o: $(OUTPUT_DIR)/likelihood.o $(OUTPUT_DIR)/ParamSet.o $(DATAMODULES)
 
 ifeq ($(KDE_REION_MODEL), tanh) 
-$(OUTPUT_DIR)/custom_xe_tanh.o: $(OUTPUT_DIR)/kde_reionization_tanh.o
+$(OUTPUT_DIR)/relike_xe.o: $(OUTPUT_DIR)/xe_tanh.o
 endif
-$(OUTPUT_DIR)/KernelDensityEstimate.o: $(REIFILES) 
+$(OUTPUT_DIR)/relike.o: $(REIFILES) 
 
-$(OUTPUT_DIR)/calclike.o: $(OUTPUT_DIR)/DataLikelihoods.o $(OUTPUT_DIR)/KernelDensityEstimate.o
+$(OUTPUT_DIR)/calclike.o: $(OUTPUT_DIR)/DataLikelihoods.o $(OUTPUT_DIR)/relike.o
 
 $(OUTPUT_DIR)/ImportanceSampling.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/IO.o
 $(OUTPUT_DIR)/MCMC.o: $(OUTPUT_DIR)/calclike.o $(OUTPUT_DIR)/propose.o $(OUTPUT_DIR)/ParamSet.o

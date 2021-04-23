@@ -4,7 +4,7 @@
     use BaseParameters
     use MatrixUtils
     use MiscUtils
-    use KernelDensityEstimate 
+    use Relike 
     implicit none
     private
 
@@ -294,22 +294,20 @@
         real(mcp), dimension(:), allocatable :: derived
 
         if (FirstCall) then
-            print *, 'Setting up KDE module...'
+            print *, 'Setting up RELIKE module...'
             call RelikeKde_Init(this%Kde, this%KdeChains)
             FirstCall = .FALSE.
             print *, '... Done.'
         end if
 
-        print *, 'RelikeKde_OneModel ... start'
         call RelikeKde_OneModel(Params%P, LogLike, derived) 
 
-        print *, 'RelikeKde_OneModel ... Done'
-
-        !HACK  need to restore and not have
+        !If you want to print mjs, uncomment below 
+        ! and add m1, m2, m3, m4, m5 in your .paramname file
         !Params%num_derived = size(derived)
         !Params%derived(1:Params%num_derived) = derived
 
-        LogLike = -1.0_mcp * log(LogLike) + 10.0_mcp
+        LogLike = -1.0_mcp * LogLike + 10.0_mcp
 
     end function Generic_GetLogLikeMain
 

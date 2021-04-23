@@ -1,9 +1,9 @@
-module KernelDensityEstimate
-  use KdeReionizationTanh
+module Relike
+  use ReionizationTanh
   use settings 
   implicit none
 
-  include "custom_xe_tanh.h"
+  include "relike_xe.h"
 
   Type RelikeKdeChains
     integer :: nrow, ncol
@@ -71,7 +71,7 @@ contains
     write (*,*) '... You have set fcov (used for KDE only): ', this%fcov
 
     if (this%fcov <= 0.0) then
-      write (*,*) 'Error (KernelDensityEstimate.f90): kde_fcov must be specified at input and > 0.'
+      write (*,*) 'Error (relike.f90): kde_fcov must be specified at input and > 0.'
       stop
     end if
 
@@ -104,7 +104,6 @@ contains
     
     if (this%init_done .eqv. .false.) then
       print *, '... Setting up PCs and likelihood'
-      ! Setup reionization PC class, load inverse PC chain mean and inverse covariance.
       call this%kde_xe_basis%init(this%kde_params%fn_pc, this%kde_params%xef, this%kde_params%smooth_sigma) 
       call this%setup_invcov() 
       call this%setup_mean() 
@@ -161,14 +160,14 @@ contains
 
   subroutine get_mjs(this, transformed_parameters, mjs) 
     ! Returns mjs as the array of projected principal component amplitude
-    ! for the xe(z) model described by f; projection done in redshift range
-    ! [6, 30], via m_j = int_{zmin}^{zmax} (xe(z)-x_fiducial(z)) * b_j(z) where
-    ! b_j(z) is the jth principal component function.
+    ! for the xe(z) model in relike_xe.f90; projection done in redshift range
+    ! [6, 30], via m_j = int_{zmin}^{zmax} (xe(z)-x_fiducial(z)) * S_j(z) where
+    ! S_j(z) is the jth principal component function.
     use settings
     real(mcp), dimension(:), intent(out), allocatable :: mjs
     real(mcp), dimension(:), intent(in) :: transformed_parameters
     
-    include "custom_xe_tanh.h"
+    include "relike_xe.h"
 
     real(mcp), dimension(:,:), allocatable :: integrand
     real(mcp), dimension(:), allocatable :: xe, xe_fid_array
@@ -188,7 +187,7 @@ contains
 
     allocate(mjs(nmjs), xe(nz), xe_fid_array(nz), integrand(nz, nmjs), STAT=status) !might want it as a derived parameter
 		if(status .ne. 0) then
-			write (*,*) 'Error (KernelDensityEstimate): memory allocation failed'
+			write (*,*) 'Error (relike.f90): memory allocation failed'
 			stop
 		endif 
 
@@ -230,7 +229,7 @@ contains
 
     allocate(mjs(5), transformed_parameters(1), derived_parameters(6), STAT=status) !might want to add mjs as derived parameters
 		if(status .ne. 0) then
-			write (*,*) 'Error (KernelDensityEstimate): memory allocation failed'
+			write (*,*) 'Error (relike.f90): memory allocation failed'
 			stop
 		endif
 
@@ -269,7 +268,7 @@ contains
 
     allocate(mjs(5), STAT=status) 
 		if(status .ne. 0) then
-			write (*,*) 'Error (KernelDensityEstimate): memory allocation failed'
+			write (*,*) 'Error (relike.f90): memory allocation failed'
 			stop
 		endif
 
@@ -303,7 +302,7 @@ contains
 		
     dmjs = mjs - this%mean
     prod = dot_product(dmjs, matmul(this%invcov * this%kde_params%fcov, dmjs)) 
-    result = exp(-0.5_mcp * prod) 
+    result = -0.5_mcp * prod 
 
   end subroutine gauss_impl
 
@@ -328,6 +327,7 @@ contains
       weight = ThisKdeChains%data(row, 1)
       result = result + exp(-0.5_mcp * prod) * weight 
     end do
+    result = log(result)
 
   end subroutine kde_impl
 
@@ -344,14 +344,14 @@ contains
   
     allocate(this%invcov(nrow, ncol), STAT=status)
     if(status .ne. 0) then
-			write (*,*) 'Error (KernelDensityEstimate.f90): memory allocation failed.'
+			write (*,*) 'Error (relike.f90): memory allocation failed.'
 			stop
 		endif
 
     open(unit = 101, file = this%kde_params%fn_invcov)   
     read(101, *, iostat=status) ((this%invcov(row, col), col = 1, ncol), row = 1, nrow)
     if(status .ne. 0) then
-      write (*,*) 'Error (KernelDensityEstimate.f90): reading inverse covariance file failed.'
+      write (*,*) 'Error (relike.f90): reading inverse covariance file failed.'
       stop
     endif
     close(101)   
@@ -369,14 +369,14 @@ contains
     
     allocate(this%mean(nrow), STAT=status)
     if(status .ne. 0) then
-			write (*,*) 'Error (KernelDensityEstimate.f90): memory allocation failed.'
+			write (*,*) 'Error (relike.f90): memory allocation failed.'
 			stop
 		endif
 
     open(unit = 101, file = this%kde_params%fn_mean)   
     read(101, *, iostat=status) (this%mean(row), row = 1, nrow)
     if(status .ne. 0) then
-      write (*,*) 'Error (KernelDensityEstimate.f90): reading PC mean file failed.'
+      write (*,*) 'Error (relike.f90): reading PC mean file failed.'
       stop
     endif
     close(101)   
@@ -401,7 +401,7 @@ contains
     this%ncol = ncol
     allocate(this%data(this%nrow, this%ncol),STAT=status)
     if(status .ne. 0) then
-			write (*,*) 'Error (KernelDensityEstimate.f90): memory allocation failed.'
+			write (*,*) 'Error (relike.f90): memory allocation failed.'
 			stop
 		endif
 
@@ -409,7 +409,7 @@ contains
     open(unit = 101, file=fn_chain)    
     read(101, *, iostat=status) ((this%data(row, col), col = 1, ncol), row = 1, nrow)
     if(status .ne. 0) then
-      write (*,*) 'Error (KernelDensityEstimate.f90): reading chain file failed.'
+      write (*,*) 'Error (relike.f90): reading chain file failed.'
       stop
     endif
     close(101)   
@@ -434,6 +434,10 @@ contains
     
   end subroutine RelikeKde_Init
 
+
+! Initially written by Alex Godunov (October 2009)
+! https://ww2.odu.edu/~agodunov/computing/programs/book2/Ch03/simpson.f90
+! Adapted by Chen Heinrich
   subroutine simpson(table, step_size, n, integral) 
     !==========================================================
     ! Integration of f(x) on [a,b] 
@@ -467,5 +471,5 @@ contains
     return
   end subroutine simpson
 
-end module KernelDensityEstimate
+end module Relike
 

@@ -1,6 +1,5 @@
-module KdeReionizationTanh
+module ReionizationTanh
   use Precision
-  !use AMLutils
   use MiscUtils
   use MpiUtils, only : MpiStop
   use cosmology
@@ -25,8 +24,6 @@ module KdeReionizationTanh
   real(dl), parameter :: Reionization_DefFraction = -1._dl 
   !if -1 set from YHe assuming Hydrogen and first ionization of Helium follow each other
   
-  !VM BEGINS
-  !real(dl) :: Reionization_AccuracyBoost = 1.2_dl
   real(dl) :: Reionization_AccuracyBoost = 1.3_dl
   !VM ENDS
   real(dl) :: Rionization_zexp = 1.5_dl
@@ -34,14 +31,8 @@ module KdeReionizationTanh
   real(dl) :: helium_fullreion_redshift  = 3.5_dl
   real(dl) :: helium_fullreion_deltaredshift  = 0.5
   real(dl) :: helium_fullreion_redshiftstart  = 5._dl
-  !VM BEGINS
-  !IT IS TRICKY TO ALLOCATE AND DEALLOCATE MEMORY IN COSMOMC
-  !THAT IS WHY WE PREFER FORTRAN 77 ARRAY STYLE WITH PRE DEFINED SIZE HERE
   integer, private, parameter :: reion_max_nbasis = 100
-  !VM ENDS
-	!VM BEGINS
 	! model x_e(t) = \bar{x}_e + \sum_j m_j S_j(z)
-	! This code is agnostic to the basis choice 
   Type BasisFineGrid
 		integer :: nz, nbasis
 		real(dl), dimension(:), allocatable :: z
@@ -65,23 +56,20 @@ module KdeReionizationTanh
 		procedure,private :: eval_fiducial=>reonizationbasis_eval_fiducial
     procedure,private :: setup_basis=>reonizationbasis_setup_basis
 	end Type ReonizationBasis
- 	!VM ENDS
+
   type ReionizationParams
     logical :: Reionization
     logical :: use_optical_depth
     real(dl) :: redshift, delta_redshift, fraction
     real(dl) :: optical_depth
-    !VM BEGINS
     integer :: nbasis
-    !IT IS TRICKY TO ALLOCATE AND DEALLOCATE MEMORY IN COSMOMC
-    !THAT IS WHY WE PREFER FORTRAN 77 ARRAY STYLE WITH PRE DEFINED SIZE HERE
-    ! real(dl), dimension(:), allocatable :: mj
     real(dl) :: mj(reion_max_nbasis)
     real(dl) :: AccBoost
     real(dl) :: tau
     logical  :: done_tau = .false.
-    !VM ENDS
+
   end type ReionizationParams
+
   type ReionizationHistory
     !These two are used by main code to bound region where xe changing 
     real(dl) :: tau_start, tau_complete
@@ -90,43 +78,22 @@ module KdeReionizationTanh
     !The rest are internal to this module.
     real(dl) :: WindowVarMid, WindowVarDelta
   end type ReionizationHistory
-  !VM BEGINS
-  !real(dl), parameter :: Reionization_maxz = 50._dl
-  ! IF BASIS GOES BEYOND THIS LIMIT, CODE WILL INCREASE MAXZ
-  !CH BEGINS (changed for zmax = 50)
-  !real(dl) :: Reionization_maxz = 50._dl
   
-  !KDE !TODO remove if needed
-  !real(dl) :: Reionization_maxz = 75._dl
-  real(dl) :: Reionization_maxz = 50._dl !75.dl
+  real(dl) :: Reionization_maxz = 50._dl 
   
-  !CH ENDS
-  !VM ENDS
   real(dl), private, parameter :: Reionization_tol = 1d-5
 
-  !HACK if this works remove original dtauda
-  !real(dl), private, external :: dtauda
-  !procedure(obj_function):: dtauda
- 
-
-  !HACK to remove if include cosmology works
-  !real(dl), private, external :: rombint, rombint2
   Type(ReionizationParams), private, pointer ::  ThisReion
   Type(ReionizationHistory), private, pointer :: ThisReionHist
-  !VM BEGINS
+
   Type(ReonizationBasis), save :: xe_basis
   logical :: use_basis	
-  !VM ENDS 
-
-  !CH 03/2020
-  !public ReionizationBasis, BasisFineGrid
-  !CH
 
 contains
-	!VM BEGINS
   ! ----------------------------------------------------------------
 
-  !Background evolution
+  !Background evolution copied from CosmoMC for fiducial cosmology
+  ! (Planck 2015 best-fit tanh dz = 0.1 model)
 function dtauda_fixed_cosmology(a)
     !get d tau / d a
     use precision
@@ -139,8 +106,7 @@ function dtauda_fixed_cosmology(a)
     real(dl) rhonu,grhoa2, a2, pnu
     integer nu_i
     
-    !HACK KDE to get tau -- need some clean up here!
-    ! output from equations.f90 used when calling ./camb in camb directory
+    ! Got these by printing from equations.f90 
     real(dl) :: grhok = 0.000000000000000E+000
     real(dl) :: grhoc = 3.995382819431314E-008
     real(dl) :: grhob = 7.424529124136492E-009
@@ -179,17 +145,13 @@ end function dtauda_fixed_cosmology
     real(dl), intent(in) :: xef,smooth_sigma
   	class(ReonizationBasis) :: this
   	if (this%init_done .eqv. .false.) then
-      ! STEP ONE: SETUP NAME OF THE FILE WITH BASIS COMPONENTS
       this%file_name = file_name
-    	! STEP TWO: READ THE FILE WITH BASIS COMPONENTS
       call this%setup_basis(smooth_sigma)
-      ! STEP THREE: set xe_fiducial
       this%xe_fiducial = xef
-      ! done
     	this%init_done = .true.
     end if  
   end subroutine reonizationbasis_init
-	! ----------------------------------------------------------------
+  
 	subroutine reonizationbasis_setup_basis(this,smooth_sigma) 
 		integer :: status, i, j
     real(dl), intent(in) :: smooth_sigma
@@ -234,9 +196,6 @@ end function dtauda_fixed_cosmology
 			 	endif
 			end do
     else 
-      ! THIS IS THE MORTOSON FILE FORMAT EXCEPT THAT I ASSUME THE FIRST LINE 
-      ! CONTAINS THE NUMBER OF LINES/COLUMNS (NOT TRUE IN THE ORIGINAL FORMAT)
-      ! FIRST LINE ALL Z's
       read(10,*,iostat=status) (this%z(i),i=1,this%nz,1)
       if(status .ne. 0) then
 				write (*,*) 'Error (reionization): read basis file failed'
@@ -872,7 +831,5 @@ end function dtauda_fixed_cosmology
     end if
   end  subroutine Reionization_SetFromOptDepth 
 
-  
-
-end module KdeReionizationTanh
+end module ReionizationTanh
 

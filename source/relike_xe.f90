@@ -1,26 +1,22 @@
 ! ===============================================================     
 ! Custom function custom_xe(z) must follow the following format
-! and returns ionization fraction at z without helium ionization
+! and returns ionization fraction at z for 6 < z < 30. 
+! For z < 6, we assume fully ionized hydrogen and singly ionized
+! helium, and a tanh transition at 3.5 for second helium ioniza-
+! tion.
 ! ===============================================================
 !function custom_xe(z)
 !    use settings
 !    implicit none
 !    real(mcp) custom_xe
 !    real(mcp), intent(in) :: z
-!    custom_xe = 2.0_mcp
+!    custom_xe = <put your custom xe(z) function here>
 !    return
 !end function custom_xe
 
-!module CustomXe 
-!use settings
-!use KdeReionizationTanh
-!implicit none  
-
-!contains
-
 function custom_xe(transformed_parameters, z) result (xe)
     use settings
-    use KdeReionizationTanh
+    use ReionizationTanh
     implicit none
 
     real(mcp), dimension(:), intent(in) :: transformed_parameters
@@ -48,8 +44,6 @@ subroutine get_transformed_parameters(parameters, transformed_parameters)
     real(mcp), dimension(:), intent(out) :: transformed_parameters
     real(mcp) :: tau, zre
 
-    print *, 'Entering get_transformed_parameters'
-
     tau = parameters(1)
     call get_zre_from_tau(tau, zre)
 
@@ -59,7 +53,7 @@ end subroutine get_transformed_parameters
 
 subroutine reion_init(use_optical_depth_in, var_value, include_helium_fullreion_in, Reion, ReionHist)
     use settings
-    use KdeReionizationTanh
+    use ReionizationTanh
     use MassiveNu
     implicit none
 
@@ -69,10 +63,7 @@ subroutine reion_init(use_optical_depth_in, var_value, include_helium_fullreion_
     Type(ReionizationParams), intent(out) :: Reion
     Type(ReionizationHistory), intent(out) :: ReionHist 
 
-    !Type(TThermalNuBackground) :: ThermalNuBackground
-    !Type(TThermalNuBackground) :: ThermalNuBack
-
-    ! from tanh ML from fiducial cosmology, needed by Reionization_Init 
+    ! Values from fiducial cosmology (Planck 2015 best-fit tanh)
     real(mcp) :: YHe = 0.2453368, akthom = 3.867559814364194E-007, tau0 = 14172.4718396201 
     integer :: FeedbackLevel = 0
 
@@ -85,8 +76,7 @@ subroutine reion_init(use_optical_depth_in, var_value, include_helium_fullreion_
         Reion%redshift = var_value
     end if
 
-    !call init_massive_nu(.true.) ! needed for getting dt/da
-    call ThermalNuBackground%Init()
+    call ThermalNuBackground%Init() ! needed for getting dtauda in ReionizationTanh module
 
     call Reionization_Init(Reion, ReionHist, YHe, akthom, tau0, FeedbackLevel)
 
@@ -96,7 +86,7 @@ end subroutine reion_init
 subroutine get_zre_from_tau(tau, zre)
 
     use settings
-    use KdeReionizationTanh
+    use ReionizationTanh
     implicit none
 
     real(mcp), intent(in):: tau
@@ -113,5 +103,3 @@ subroutine get_zre_from_tau(tau, zre)
     zre = Reion%redshift 
 
 end subroutine get_zre_from_tau	
-
-!end module CustomXe
