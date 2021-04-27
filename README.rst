@@ -30,18 +30,20 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
       cd CosmoMC-relike
       git submodule update --init --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
   
-- Compile the code with MPI. This is the default option, which is recommended for running chains (so you can calculate convergence statistics during the run):: 
+- Compile the code with MPI. 
+
+  - This is the default option, which is recommended for running chains (so you can calculate convergence statistics during the run):: 
 
       make
   
-- To compile without MPI::
+  - To compile without MPI::
 
-    export BUILD=NOMPI
-    make
+      export BUILD=NOMPI
+      make
   
 - Untar the chain files used for KDE::
 
-    tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
+     tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
 
 - Run an example for a single tanh model in KDE mode:: 
 
