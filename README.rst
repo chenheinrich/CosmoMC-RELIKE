@@ -32,27 +32,27 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
   
 - Compile the code with MPI. This is the default option, which is recommended for running chains (so you can calculate convergence statistics during the run):: 
 
-  make
+      make
   
 - To compile without MPI::
 
-  export BUILD=NOMPI
-  make
+    export BUILD=NOMPI
+    make
   
 - Untar the chain files used for KDE:
 ::
 
-  tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
+    tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
 
 - Run an example for a single tanh model in KDE mode: 
 ::
 
-  ./cosmomc relike_example_tanh_kde_single_point.ini
+    ./cosmomc relike_example_tanh_kde_single_point.ini
 
 - Run an example chain for the tanh model in Gaussian mode without MPI (or with MPI): 
 ::
 
-   ./cosmomc relike_example_tanh_gauss_chains.ini (mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini)
+    ./cosmomc relike_example_tanh_gauss_chains.ini (mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini)
 
   
 Using the code
