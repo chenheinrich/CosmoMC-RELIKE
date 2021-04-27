@@ -69,9 +69,10 @@ Related code
 
 The Python package `relike <https://github.com/chenheinrich/RELIKE>`_ is a python 
 version of the reionization effective likelihood code used in CosmoMC-relike. 
+
 - It includes only the Gaussian approximation mode for now (it does not have the KDE mode).
-- You can easily incorporate the python likelihood with other samplers such as `Cobaya <https://github.com/CobayaSampler/cobaya>`_
-or `CosmoSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>`_ 
+
+- You can easily incorporate the python likelihood with other samplers such as `Cobaya <https://github.com/CobayaSampler/cobaya>`_ or `CosmoSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>`_ 
 
 Branches
 =============================
