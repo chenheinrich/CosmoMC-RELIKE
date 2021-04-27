@@ -23,7 +23,7 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 - Make sure all submodules are updated during cloning
 ::
 
-      git clone --recurse-submodules https://github.com/chenheinrich/CosmoMC-relike.git 
+      git clone --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
       
 - If you did not clone using the --recurse-submodules flag, use
 ::
@@ -34,7 +34,7 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 - Compile the code: 
 ::
 
-  cd CosmoMC-relike/cosmomc 
+  cd CosmoMC-relike
   make
   
 - Untar the chain files used for KDE:
