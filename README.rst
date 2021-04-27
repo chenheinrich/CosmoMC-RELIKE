@@ -30,13 +30,13 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
       cd CosmoMC-relike
       git submodule update --init --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
   
-- Compile the code with MPI. 
+- Compile the code.
 
-  - This is the default option, which is recommended for running chains (so you can calculate convergence statistics during the run):: 
-
+  - Compile with MPI. This is the default option, which is recommended for running chains (so you can calculate convergence statistics during the run)::
+  
       make
   
-  - To compile without MPI::
+  - Compile without MPI::
 
       export BUILD=NOMPI
       make
@@ -49,7 +49,7 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 
     ./cosmomc relike_example_tanh_kde_single_point.ini
 
-- Run an example chain for the tanh model in Gaussian mode without MPI (or with MPI):: 
+- Run an example chain for the tanh model in Gaussian mode without MPI (or with MPI). This will start a chain running, you can stop it at any time using Ctrl+C:: 
 
     ./cosmomc relike_example_tanh_gauss_chains.ini (mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini)
 
