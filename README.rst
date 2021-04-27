@@ -20,10 +20,15 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
   - On a cluster: Find and load the MPI module (e.g. `openmpi`, `mpich` or `pmi`) on the cluster using `module avail` and `module load XX`; consult the cluster’s user guidelines).
   - On a laptop: Install `OpenMPI <https://www.open-mpi.org/>`_ using your system’s package manager (`sudo apt install libopenmpi` in Debian-based systems)
 
-- Make sure all submodules are updated during cloning (or after cloning)
+- Make sure all submodules are updated during cloning
 ::
 
-      git clone --recurse-submodules (git submodule update --init --recursive)
+      git clone --recurse-submodules https://github.com/chenheinrich/CosmoMC-relike.git 
+      
+- If you did not clone using the --recurse-submodules flag, use
+::
+
+      git submodule update --init --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
   
   
 - Compile the code: 
