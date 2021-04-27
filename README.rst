@@ -28,7 +28,7 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 - If you already cloned without using the --recurse-submodules flag, you can still update the submodules::
 
       cd CosmoMC-relike
-      git submodule update --init --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
+      git submodule update --init --recursive
   
 - Compile the code
 
