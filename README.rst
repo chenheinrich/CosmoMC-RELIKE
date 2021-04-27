@@ -39,18 +39,15 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
     export BUILD=NOMPI
     make
   
-- Untar the chain files used for KDE:
-::
+- Untar the chain files used for KDE::
 
     tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
 
-- Run an example for a single tanh model in KDE mode: 
-::
+- Run an example for a single tanh model in KDE mode:: 
 
     ./cosmomc relike_example_tanh_kde_single_point.ini
 
-- Run an example chain for the tanh model in Gaussian mode without MPI (or with MPI): 
-::
+- Run an example chain for the tanh model in Gaussian mode without MPI (or with MPI):: 
 
     ./cosmomc relike_example_tanh_gauss_chains.ini (mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini)
 
