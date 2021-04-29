@@ -2,7 +2,7 @@
 CosmoMC-RELIKE
 ===================
 :CosmoMC-RELIKE: Extended CosmoMC with Reionization Effective Likelihood (RELIKE)
-:Homepage: https://github.com/chenheinrich/CosmoMC-relike
+:Homepage: https://github.com/chenheinrich/CosmoMC-RELIKE
 
 If you use this code, please cite `Heinrich & Hu 2021 <arxiv link to be added>`_. <add arxiv link>
 
