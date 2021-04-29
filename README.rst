@@ -6,12 +6,12 @@ CosmoMC-RELIKE
 
 If you use this code, please cite `Heinrich & Hu 2021 <arxiv link to be added>`_. (coming soon) 
 
-Description and installation
-=============================
-
 CosmoMC-RELIKE uses the generic sampler of CosmoMC to sample the fortran implementation of the RELIKE likelihood. 
 
 For more information on CosmoMC and getdist (the plotting package), see `here <https://cosmologist.info/cosmomc/readme.html>`_. 
+
+Installation
+=============================
 
 - Install/Load MPI (optional)
 
