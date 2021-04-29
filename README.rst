@@ -62,11 +62,14 @@ Using the code
 
 - Choose a mode:
 
+
   - The code has two modes: The KDE and the Gaussian mode. Both are tested to be sufficiently accurate, while the KDE mode captures skewness in distributions slightly better. While KDE takes longer to run, both are very fast in comparison to a sampling of the exact likelihoods. 
 
   - When using the KDE likelihood, we suggest using the default value of f = 0.14 to avoid over-smoothing pa-rameter posteriors while maintaining accuracy during the KDE operation. 
+  
 
 - Define your xe(z) function:
+
 
   - Open relike_xe.f90 define your model inside the function custom_xe(z) function along with additional model parameters. Do not forget to modify the header file relike_xe.h as well accordingly. Note that the tanh model example appears more complicated than it needs to be (in order to sample from a flat tau prior, we choose for xe(z) to take in as model parameter the optical depth tau instead of redshift of transition zre, so the extra code is used to calculate zre given tau.
   
