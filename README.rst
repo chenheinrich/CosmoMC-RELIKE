@@ -62,9 +62,9 @@ Using the code
 
 - Choose a mode:
 
-    - The code has two modes: The KDE and the Gaussian mode. Both are tested to be sufficiently accurate, while the KDE mode captures skewness in distributions slightly better. While KDE takes longer to run, both are very fast in comparison to a sampling of the exact likelihoods. 
+  - The code has two modes: The KDE and the Gaussian mode. Both are tested to be sufficiently accurate, while the KDE mode captures skewness in distributions slightly better. While KDE takes longer to run, both are very fast in comparison to a sampling of the exact likelihoods. 
 
-    - When using the KDE likelihood, we suggest using the default value of f = 0.14 to avoid over-smoothing pa-rameter posteriors while maintaining accuracy during the KDE operation. 
+  - When using the KDE likelihood, we suggest using the default value of f = 0.14 to avoid over-smoothing pa-rameter posteriors while maintaining accuracy during the KDE operation. 
 
 - Define your xe(z) function:
 
