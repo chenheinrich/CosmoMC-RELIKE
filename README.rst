@@ -1,7 +1,7 @@
 ===================
-CosmoMC-relike
+CosmoMC-RELIKE
 ===================
-:CosmoMC-relike: Extended CosmoMC with Reionization Effective Likelihood (RELIKE)
+:CosmoMC-RELIKE: Extended CosmoMC with Reionization Effective Likelihood (RELIKE)
 :Homepage: https://github.com/chenheinrich/CosmoMC-relike
 
 If you use this code, please cite `Heinrich & Hu 2021 <arxiv link to be added>`_. <add arxiv link>
@@ -9,7 +9,7 @@ If you use this code, please cite `Heinrich & Hu 2021 <arxiv link to be added>`_
 Description and installation
 =============================
 
-CosmoMC-relike uses the generic sampler of CosmoMC to sample the fortran implementation of the `relike` likelihood. 
+CosmoMC-RELIKE uses the generic sampler of CosmoMC to sample the fortran implementation of the RELIKE likelihood. 
 
 For more information on CosmoMC and getdist (the plotting package), see `here <https://cosmologist.info/cosmomc/readme.html>`_. 
 
@@ -20,14 +20,14 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
   - On a cluster: Find and load the MPI module (e.g. `openmpi`, `mpich` or `pmi`) on the cluster using `module avail` and `module load XX`; consult the cluster’s user guidelines).
   - On a laptop: Install `OpenMPI <https://www.open-mpi.org/>`_ using your system’s package manager (`sudo apt install libopenmpi` in Debian-based systems)
 
-- Make sure all submodules are updated during cloning::
+- Make sure all submodules are updated during cloning (skip if you already cloned it recursively as a submodule) ::
 
       git clone --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
-      cd CosmoMC-relike
+      cd CosmoMC-RELIKE
       
 - If you already cloned without using the --recurse-submodules flag, you can still update the submodules::
 
-      cd CosmoMC-relike
+      cd CosmoMC-RELIKE
       git submodule update --init --recursive
   
 - Compile the code
@@ -45,7 +45,7 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 
      tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
 
-- Run an example for a single tanh model in KDE mode:: 
+- Run an example for a single tanh model in KDE mode (note that most of the time reported for this single point computation is for loading the chain, which is a one-time upfront cost that is not repeated when running chains):: 
 
     ./cosmomc relike_example_tanh_kde_single_point.ini
 
@@ -57,12 +57,26 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 Using the code
 ==================
 
-<more description goes here.>
+- Choose a mode:
+
+    - The code has two modes: The KDE and the Gaussian mode. Both are tested to be sufficiently accurate, while the KDE mode captures skewness in distributions slightly better. While KDE takes longer to run, both are very fast in comparison to a sampling of the exact likelihoods. 
+
+    - When using the KDE likelihood, we suggest using the default value of f = 0.14 to avoid over-smoothing pa-rameter posteriors while maintaining accuracy during the KDE operation. 
+
+- Define your xe(z) function:
+
+  - Open relike_xe.f90 define your model inside the function custom_xe(z) function along with additional model parameters. Do not forget to modify the header file relike_xe.h as well accordingly. Note that the tanh model example appears more complicated than it needs to be (in order to sample from a flat tau prior, we choose for xe(z) to take in as model parameter the optical depth tau instead of redshift of transition zre, so the extra code is used to calculate zre given tau.
+  
+  - Copy the file relike_example_tanh_gauss_chains.ini and add parameter names and priors for this model. 
+  
+  - Copy the paramnames/relike_tanh.paramname file and add the relevant parameter names and latex labels.
+  
+  - Note that the model parameters or priors must be arranged to explicitly satisfy fully-ionized hydrogen and singly-ionized helium for z≤6.
 
 Algorithm details
 ==================
 
-See the latest `paper <http://arxiv.org/abs/...>`_. <to be added>
+Please see the latest paper `Heinrich & Hu 2021 <http://arxiv.org/abs/...>`_ for more details.
 
 Related code
 ==================
