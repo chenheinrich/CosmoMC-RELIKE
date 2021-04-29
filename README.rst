@@ -22,7 +22,7 @@ Installation
 
 - Make sure all submodules are updated during cloning (skip if you already cloned it recursively as a submodule) ::
 
-      git clone --recursive https://github.com/chenheinrich/CosmoMC-relike.git 
+      git clone --recursive https://github.com/chenheinrich/CosmoMC-RELIKE.git 
       cd CosmoMC-RELIKE
       
 - If you already cloned without using the --recurse-submodules flag, you can still update the submodules::
