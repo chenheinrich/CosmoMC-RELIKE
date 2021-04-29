@@ -53,7 +53,10 @@ For more information on CosmoMC and getdist (the plotting package), see `here <h
 
     ./cosmomc relike_example_tanh_gauss_chains.ini (mpirun -np 4 ./cosmomc relike_example_tanh_gauss_chains.ini)
 
-  
+- Because we only modified the generic sampler in the original CosmoMC, you should be able to run the original test as well::
+
+    ./cosmomc test.ini
+
 Using the code
 ==================
 
@@ -72,6 +75,7 @@ Using the code
   - Copy the paramnames/relike_tanh.paramname file and add the relevant parameter names and latex labels.
   
   - Note that the model parameters or priors must be arranged to explicitly satisfy fully-ionized hydrogen and singly-ionized helium for z≤6.
+
 
 Algorithm details
 ==================
