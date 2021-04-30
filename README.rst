@@ -45,6 +45,9 @@ Installation
 
      tar -zxvf relike_data/pl18_zmax30/chains.tar.gz -C relike_data/pl18_zmax30/
 
+
+Running Examples
+=============================
 - Run an example for a single tanh model in KDE mode (note that most of the time reported for this single point computation is for loading the chain, which is a one-time upfront cost that is not repeated when running chains):: 
 
     ./cosmomc relike_example_tanh_kde_single_point.ini
