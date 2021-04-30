@@ -78,7 +78,7 @@ Using the code
   
   - Copy the file relike_example_tanh_gauss_chains.ini and add parameter names and priors for this model. 
   
-  - Copy the paramnames/relike_tanh.paramname file and add the relevant parameter names and latex labels.
+  - Copy the paramnames/params_relike_tanh_tau.paramnames file and add the relevant parameter names and latex labels.
   
   - Note that the model parameters or priors must be arranged to explicitly satisfy fully-ionized hydrogen and singly-ionized helium for z≤6.
 
