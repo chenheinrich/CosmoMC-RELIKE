@@ -4,7 +4,7 @@ CosmoMC-RELIKE
 :CosmoMC-RELIKE: Extended CosmoMC with Reionization Effective Likelihood (RELIKE)
 :Homepage: https://github.com/chenheinrich/CosmoMC-RELIKE
 
-If you use this code, please cite `Heinrich & Hu 2021 <arxiv link to be added>`_. (coming soon) 
+If you use this code, please cite `Heinrich & Hu 2021 <https://arxiv.org/abs/2104.13998>`_.
 
 CosmoMC-RELIKE uses the generic sampler of CosmoMC to sample the fortran implementation of the RELIKE likelihood. 
 
@@ -83,7 +83,7 @@ Using the code
 Algorithm details
 ==================
 
-Please see the latest paper `Heinrich & Hu 2021 <http://arxiv.org/abs/...>`_ for more details.
+Please see the latest paper `Heinrich & Hu 2021 <https://arxiv.org/abs/2104.13998>`_ for more details.
 
 Related code
 ==================
